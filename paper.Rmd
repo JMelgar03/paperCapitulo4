@@ -1,0 +1,27 @@
+---
+title: "Análisis desempleo recién graduados ingeniería en sistemas UNAH"
+author: "Jonathan Melgar"
+date: "18/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Introducción
+En este analisis se estudiara las causas de desempleo en los recién graduados de in
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
