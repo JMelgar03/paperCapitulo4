@@ -7,21 +7,363 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(caret)
 ```
 
-##Introducción
-En este analisis se estudiara las causas de desempleo en los recién graduados de in
+## Introducción
+En este análisis se estudiaran las causas de desempleo en los recién graduados de ingeniería en sistemas mostrando el procedimiento de tratamiento de datos de la encuesta realizada a estudiantes recién graduados de ingeniería en sistemas de la UNAH para determinar qué aspectos se debe tomar en cuenta o fortalecer para mejorar la empleabilidad de los estudiantes de esta carrera.
 
-```{r cars}
-summary(cars)
+## Variables capturadas
+```{r reading_dataset, echo=FALSE}
+survey <- read.csv("encuesta_limpia.csv",sep = ",", header = T)
+
+str(survey[,(names(survey) %in% c("eleccion_estudio","excelencia_academica","promedio_graduacion","clases_por_periodo","anio_graduacion","trabajo_actual"))])
+
+```
+Para este pequeño análisis se obtuvieron 59 observaciones y 6 columnas que fueron tomadas de la encuesta completa que cuenta con  `r nrow(survey)` observaciones y `r length(names(survey))` columnas las cuales estan organizadas en las siguientes categorias:
+
+1. Demográficas
+2. Rendimiento universitario
+3. Post-universidad
+4. Hardskills
+5. Softskills
+
+Encuesta completa:
+```{r}
+str(survey)
+```
+A continuación un pequeño resumen de las 6 columnas o variables seleccionadas para este análisis:
+
+```{r}
+summary(survey[,(names(survey) %in% c("eleccion_estudio","excelencia_academica","promedio_graduacion","clases_por_periodo","anio_graduacion","trabajo_actual"))])
 ```
 
-## Including Plots
+## Tratamiento de columnas
 
-You can also embed plots, for example:
+En el tratamiento de los datos lo mas común es que se realice la detección de valores nulos y transformaciones, de las 6 variables o columnas a analizar.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r echo=FALSE}
+str(survey$promedio_graduacion)
+survey$promedio_graduacion <- as.factor(survey$promedio_graduacion)
+str(survey$promedio_graduacion)
+
+str(survey$clases_por_periodo)
+survey$clases_por_periodo <- as.factor(survey$clases_por_periodo)
+str(survey$clases_por_periodo)
+
+survey$anio_graduacion 
+survey$anio_graduacion <- as.factor(survey$anio_graduacion)
+str(survey$anio_graduacion)
+
+
+variables_estudio <- (survey[,(names(survey) %in% c("eleccion_estudio","excelencia_academica","promedio_graduacion","clases_por_periodo","anio_graduacion","trabajo_actual"))])
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#### Limpiando valores nulos
+```{r echo=FALSE}
+summary(variables_estudio)
+na.summay <- c()
+for( myname in names(variables_estudio)){
+  print(myname)
+  
+  s <- as.data.frame(prop.table(table(is.na(variables_estudio[,myname]))))
+  operacion <- s %>% filter(Var1 == TRUE) %>% select(Freq)
+  
+  df_temp <- data.frame( 
+    column.name=c(myname),  
+    na.percentage = ifelse( length(operacion$Freq) == 0, 0, operacion$Freq[1] )
+  )
+  
+  na.summay <- rbind(na.summay,df_temp)
+  
+}
+```
+Como se observa solo anio_graduacion obtuvo 2 valores nulos, en este caso no se vio factible eliminar y se agregaron a la media el siguiente bloque de código muestra este procedimiento.
+
+```{r}
+na.summay %>% arrange(-na.percentage) %>% filter(na.percentage > 0)
+variables_estudio$anio_graduacion <- as.integer(variables_estudio$anio_graduacion)
+x <- variables_estudio %>% filter(!is.na(anio_graduacion))
+media <- median(x$anio_graduacion)
+variables_estudio[is.na(variables_estudio$anio_graduacion),"anio_graduacion"] <- media
+variables_estudio$anio_graduacion <- as.factor(variables_estudio$anio_graduacion)
+```
+
+## Análisis descriptivo
+
+En esta sección se describirán mediante gráficos los datos recopilados de las diferentes variables además de las transformaciones realizadas.
+
+#### Clases por periodo
+```{r echo=FALSE}
+ggplot(data=survey, aes(as.factor(clases_por_periodo))) + geom_bar(color="blue", fill=rgb(0.1,0.5,0.4,0.7), aes(y=..prop.., group = 1)) +
+ labs(x ="clases por periodo", y= "Porcentaje") 
+ ggsave("barplot_clases_por_periodo.png")
+ 
+```
+
+Estos valores podrían servir para medir de manera subjetiva el nivel de esfuerzo que tenían los encuestados en su etapa de estudiantes, por la condición de que algunas personas trabajan y estudian no son capaces de cursar el mismo número de clases que las que no cuentan con empleo y se dedican solo al estudio aún así el valor más común es 4 que se encuentra dentro del rango de lo sugerido por el plan de estudios.
+
+#### Anio graduación
+
+```{r echo=FALSE}
+survey$anio_graduacion <- as.numeric(paste(survey$anio_graduacion ))
+summary(survey$anio_graduacion)
+survey$anio_graduacion[[55]] <- 2018
+ ggplot(survey, aes(y=anio_graduacion)) + geom_boxplot(aes(x = factor(1))) +
+  ylim(2015,2021)
+ggsave("anio_graduacion.png")
+```
+
+La principal razón para considerar el año de graduación como verdaderamente importante, es comprender que deseamos abarcar hasta lo más actual posible, pues son estas generaciones recientes las que más dificultades podrían presentar.
+Es de esta manera que tenemos que la mayoría de encuestados corresponden a egresados el año 2019, son una muestra bastante relevante para los fines que perseguimos, pues ejemplifican a la perfección las complicaciones que podrían tener en temas de empleabilidad.
+
+#### Promedio graduación
+
+```{r echo=FALSE}
+survey$promedio_graduacion[[21]] <- 78
+survey$promedio_graduacion <- as.numeric(paste(survey$promedio_graduacion))
+summary(survey$promedio_graduacion)
+ggplot(survey, aes(y=promedio_graduacion)) + geom_boxplot(aes(x = factor(1)))
+ggsave("boxplot_promedio_graduacion.png")
+```
+
+Un gráfico de caja que pareció la opción más viable para representar estos valores tan diversos, y es que encontramos valores bastante atípicos tanto por encima como debajo del rango intercuartílico.
+Más adelante en el análisis correlacional se estudiara si estos valores atípicos dependen de las clases que se llevaban por periodo.
+
+#### Trabajo actual
+```{r echo=FALSE}
+survey$trabajo_actual
+ggplot(data=survey, aes(as.factor(trabajo_actual))) + geom_bar( color="black", fill=rgb(0.4,0.5,0.1,0.7), aes(y=..prop.., group = 1)) +
+ labs(x ="trabajo_actual", y= "Porcentaje") 
+ggsave("trabajo_actual.png")
+```
+El porcentaje de empleabilidad en los estudiantes recién graduados de ingeniería en sistemas como se observa en la figura anterior es de más del 80% con menos del 20% desempleado a la actualidad.
+
+## Rendimiento Universitario 
+```{r echo=FALSE}
+survey$excelencia_academica 
+nombre_columnas <- c(rep("eleccion_estudio" , 2),rep("excelencia_academica", 2))
+condicion <- rep(c("Si","No"), 2)
+valor_eleccion_estudio <- prop.table(table(survey$eleccion_estudio))
+
+valor_excelencia_academica <- prop.table(table(survey$excelencia_academica))
+valor <- c(valor_eleccion_estudio[[2]], valor_eleccion_estudio[[1]],
+           valor_excelencia_academica[[2]],valor_excelencia_academica[[1]]) 
+df_plot_ru <- data.frame(nombre_columnas, condicion, valor)
+ggplot(df_plot_ru, aes(fill=condicion, y=valor, x=nombre_columnas)) + 
+    geom_bar(position="dodge", stat="identity") + 
+  labs(y = "Porcentaje") +
+    coord_flip()
+ggsave("becado.png")
+```
+
+Los encuestados respondieron a estas preguntas binarias ofreciendo resultados que más adelante cotejados con otras variables de interés, permitirán hacer un análisis más complejo sobre aspectos que podrían repercutir en el estado laboral de los mismos.
+
+Sin embargo, de manera general obtenemos que quienes no obtuvieron calificaciones que los posicionaran como estudiantes de excelencia académica doblan a los que sí lo consiguieron, también se observa que la mayor parte de los encuestados estudiaron la carrera de ingeniería en sistemas por elección propia.
+
+##Correlaciones
+
+Un estudio correlacional determina si dos variables están correlacionadas o no. Esto significa analizar si un aumento o disminución en una variable coincide con un aumento o disminución en la otra variable.
+
+#### Correlación de variables categoricas
+```{r}
+prop.table(table(survey$eleccion_estudio,survey$excelencia_academica),1)
+
+ggplot(survey) +
+  aes(x = eleccion_estudio, fill = factor(excelencia_academica)) +
+  geom_bar(position = "stack") +
+  theme(axis.text.x = element_text(angle = 45))
+
+chisq.test(table(survey$eleccion_estudio,survey$excelencia_academica))
+
+```
+##### Conclusión
+Según el valor obtenido del p-value se rechaza la hipotesis nula, por lo tanto las variables son dependientes.
+Los datos anteriores muestran que las personas que no eligen la carrera por elección propia estan a un 50% de ser o no excelencia académica, mientras tanto y contradiciendo a lo que se cree el porcentaje de los que eligen la carrera y no son excelencia académica curiosamente es mayor.
+
+#### Correlación de variables numerica/categorica
+La correlación que se tratará en esta seccion es entre la variable promedio_graduacion y trabajo_actual.
+```{r echo=FALSE}
+copia_survey <- survey
+
+boxplot(survey$promedio_graduacion)
+shapiro.test(survey$promedio_graduacion)
+qqnorm(survey$promedio_graduacion)
+qqline(survey$promedio_graduacion)
+
+str(survey$promedio_graduacion)
+
+survey[survey$promedio_graduacion < 71  , "promedio_graduacion"] <- median(survey$promedio_graduacion)
+
+survey[ survey$promedio_graduacion > 85  , "promedio_graduacion"] <- median(survey$promedio_graduacion)
+
+shapiro.test(survey$promedio_graduacion)
+
+```
+##### Conclusión 
+Como se observa el valor de p-value es mayor a 0.05 por lo cual no podemos rechazar la hipotesis nula y la variable es normal.
+
+Se procede a crear dos grupos uno para los egresados que si tienen empleo y otro para los que no tienen empleo.
+
+```{r}
+Si_trabaja <- survey %>% filter(trabajo_actual == "Sí") %>% select(promedio_graduacion)
+no_trabaja <- survey %>% filter(trabajo_actual == "No") %>% select(promedio_graduacion)
+
+```
+#### Análisis para el grupo que si tiene empleo:
+
+```{r}
+boxplot(Si_trabaja$promedio_graduacion)
+qqnorm(Si_trabaja$promedio_graduacion)
+qqline(Si_trabaja$promedio_graduacion)
+shapiro.test(Si_trabaja$promedio_graduacion)
+
+```
+
+##### Conclusión
+El resultado de p-value es 0.1172 que es mayor a 0.05 por lo tanto no se puede rechazar la hipotesis nula y los datos son normales.
+
+#### Análisis para el grupo que no tiene empleo:
+
+```{r}
+boxplot(no_trabaja$promedio_graduacion)
+qqnorm(no_trabaja$promedio_graduacion)
+qqline(no_trabaja$promedio_graduacion)
+shapiro.test(no_trabaja$promedio_graduacion)
+
+```
+
+##### Conclusión
+El resultado de p-value es 0.2167 que es mayor a 0.05 por lo tanto no se puede rechazar la hipotesis nula y los datos son normales.
+
+####Prueba de homocedasticidad
+
+```{r}
+var.test(no_trabaja$promedio_graduacion,Si_trabaja$promedio_graduacion)
+
+```
+####Interpretación: 
+Con un p-value = 0.6082, mayor de 0.05, no podemos rechazar la hipótesis nula. Por lo tanto suponemos homogeneidad de varianzas.
+
+```{r}
+t.test( no_trabaja$promedio_graduacion,Si_trabaja$promedio_graduacion, 
+        alternative = "two.sided", 
+        paired = FALSE,
+        var.equal = TRUE )
+```
+
+####Interpretación: 
+Con un p-value = 0.3803, mayor de 0.05, no podemos rechazar la hipótesis nula. Por lo tanto suponemos que las medias de los grupos son iguales.
+
+
+#### Correlación de variables numéricas
+```{r echo=FALSE}
+numeric_corr <- survey %>% select(clases_por_periodo,promedio_graduacion)
+numeric_corr2 <- numeric_corr
+numeric_corr2$clases_por_periodo <- as.numeric(paste(numeric_corr2$clases_por_periodo))
+
+str(numeric_corr2)
+
+boxplot(numeric_corr2$clases_por_periodo)
+boxplot(numeric_corr2$promedio_graduacion)
+
+y <- cor(numeric_corr2, method = c("pearson", "kendall", "spearman"))
+
+y
+
+corrplot(y, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+Sorprende ver el poco impacto que tienen las clases que llevaba por periodo un estudiante en su promedio de graduacion a penas del 13%.
+
+```{r}
+
+res <- prcomp(numeric_corr2,scale=F)
+fviz_eig(res)
+
+fviz_pca_ind(res,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+
+fviz_pca_biplot(res, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969"  # Individuals color
+)
+
+```
+Al ser solo dos variables numericas las que se estan correlacionando es evidente el tipo de influencia de una con la otra se observa que el angulo entre las dos variables se acerca a 90 grados y el sen(90) es 0.
+
+##Análisis explicativo
+
+En nuestro caso de estudio la variable de respuesta y variable dependiente será la empleabilidad de los graduados de ingeniería en sistemas, dicha variable está definida en nuestra encuesta por la siguiente pregunta:
+¿Actualmente tienes trabajo? 
+En el siguiente bloque de codigo se realiza una regesión a nuestra variable dependiente junto a un conjunto de variables independientes analizando el impacto de estas en la variable de dolor.
+
+```{r}
+survey$tiene.empleo <- "0"
+survey[survey$trabajo_actual == "No", "tiene.empleo"] <- "1"
+ 
+ 
+ prop.table(table(survey$tiene.empleo))
+ 
+ vindependientes <- c(
+    "genero",
+    "edad",
+    "nivel_ingles",
+    "nivel_servidores",
+    "nivel_programacion",
+    "actividades_extracurriculares",
+    "tiene.empleo"
+  )
+ 
+ datos_new <- survey[,names(survey) %in% vindependientes] 
+
+  datos_new$tiene.empleo <- as.factor(datos_new$tiene.empleo)
+
+  modelo <- glm(tiene.empleo ~ .,  data= datos_new, family="binomial")
+
+  centinela <- varImp(modelo)
+  centinela$col <- row.names(centinela)
+  centinela <- centinela %>% arrange(-Overall)
+  centinela
+
+  ggplot(datos_new) +
+    aes(x=edad, fill=factor(tiene.empleo))+
+    geom_bar(position = "stack")+
+    theme(axis.title.x = element_text(angle = 45))+
+    scale_fill_manual(values = c("#999999","#E69F00"))
+
+```
+Tomar en cuenta que el numero 1 es el factor de desempleo, en el gráfico anterior se muestran datos muy relevantes, como por ejemplo que la mayor parte de los egresados de la carrera de ingeniería en sistemas que se encuentran desempleados están en el rango de edad de 25-27 años y por el contrario los que tienen empleo se encuentran en el rango de edad de 27-31 años, aquí se puede inferir que el aspecto de la experiencia puede jugar un papel muy importante en las causas de desempleo. 
+
+```{r echo=FALSE}
+ggplot(datos_new) +
+    aes(x=nivel_ingles, fill=factor(tiene.empleo))+
+    geom_bar(position = "stack")+
+    theme(axis.title.x = element_text(angle = 45))+
+    scale_fill_manual(values = c("#8bb83a","#800000"))
+
+```
+
+Tomar en cuenta que el numero 1 es el factor de desempleo, se analiza que impacto tiene el saber inglés frente al desempleo, el gráfico muestra que las personas que poseen un nivel de inglés avanzado (5) tienen 0% de taza de desempleo, en los demas niveles si se reflejan porcentajes de desempleo siendo el nivel 3 con mas concurrencia y tambien con el mayor porcentaje de desempleo.
+
+```{r echo=FALSE}
+ggplot(datos_new) +
+    aes(x= nivel_servidores , fill=factor(tiene.empleo))+
+    geom_bar(position = "stack")+
+    theme(axis.title.x = element_text(angle = 45))+
+    scale_fill_manual(values = c("#8bb83a","#800000"))
+
+```
+Tomar en cuenta que el numero 1 es el factor de desempleo, el gráfico anterior muestra datos acorde a lo que se viene viendo en esta sección a mayor nivel de manejo o conocimiento de servidores menor porcentaje de desempleo esto lo vemos en los niveles 3 y 4 siendo el nivel 1 con el mayor porcentaje de desempleo.
+
+De los datos anteriores se puede concluir que los retos que un recien graduado se enfrenta van relacionados a la experiencia, y el nivel de conocimiento en areas sensibles como el ingles por ejemplo que las personas que estaban en un nivel avanzado contaban con 0% porciento de desempleo.
+
+## Solución técnologica.
