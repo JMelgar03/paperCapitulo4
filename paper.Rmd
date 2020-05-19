@@ -12,10 +12,12 @@ library(ggplot2)
 library(corrplot)
 library(factoextra)
 library(caret)
+setwd("/")
+setwd("C:/Users/Wilma/Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4")
 ```
 
 ## Introducción
-En este análisis se estudiaran las causas de desempleo en los recién graduados de ingeniería en sistemas mostrando el procedimiento de tratamiento de datos de la encuesta realizada a estudiantes recién graduados de ingeniería en sistemas de la UNAH para determinar qué aspectos se debe tomar en cuenta o fortalecer para mejorar la empleabilidad de los estudiantes de esta carrera.
+En este análisis se estudiará las causas de desempleo en los recién graduados de ingeniería en sistemas mostrando el procedimiento de tratamiento de datos de la encuesta realizada a estudiantes recién graduados de de esta carrera especificamente de la UNAH para determinar qué aspectos se debe tomar en cuenta o fortalecer para mejorar la empleabilidad de los estudiantes por egresar segun los resultados obtenidos.
 
 ## Variables capturadas
 ```{r reading_dataset, echo=FALSE}
@@ -33,12 +35,12 @@ Para este pequeño análisis se obtuvieron 59 observaciones y 6 columnas que fue
 5. Softskills
 
 Encuesta completa:
-```{r}
+```{r echo=FALSE}
 str(survey)
 ```
-A continuación un pequeño resumen de las 6 columnas o variables seleccionadas para este análisis:
+A continuación un pequeño resumen (Summary) de las 6 columnas o variables seleccionadas para este análisis:
 
-```{r}
+```{r echo=FALSE}
 summary(survey[,(names(survey) %in% c("eleccion_estudio","excelencia_academica","promedio_graduacion","clases_por_periodo","anio_graduacion","trabajo_actual"))])
 ```
 
@@ -86,7 +88,7 @@ Como se observa solo anio_graduacion obtuvo 2 valores nulos, en este caso no se 
 
 ```{r}
 na.summay %>% arrange(-na.percentage) %>% filter(na.percentage > 0)
-variables_estudio$anio_graduacion <- as.integer(variables_estudio$anio_graduacion)
+variables_estudio$anio_graduacion <- as.numeric(paste(variables_estudio$anio_graduacion))
 x <- variables_estudio %>% filter(!is.na(anio_graduacion))
 media <- median(x$anio_graduacion)
 variables_estudio[is.na(variables_estudio$anio_graduacion),"anio_graduacion"] <- media
@@ -95,13 +97,13 @@ variables_estudio$anio_graduacion <- as.factor(variables_estudio$anio_graduacion
 
 ## Análisis descriptivo
 
-En esta sección se describirán mediante gráficos los datos recopilados de las diferentes variables además de las transformaciones realizadas.
+En esta sección se describirán mediante gráficos los datos recopilados de las diferentes variables su comportamiento y mencion de valores atípicos en caso de que los hayan, además de las transformaciones realizadas.
 
 #### Clases por periodo
 ```{r echo=FALSE}
 ggplot(data=survey, aes(as.factor(clases_por_periodo))) + geom_bar(color="blue", fill=rgb(0.1,0.5,0.4,0.7), aes(y=..prop.., group = 1)) +
  labs(x ="clases por periodo", y= "Porcentaje") 
- ggsave("barplot_clases_por_periodo.png")
+ #ggsave("barplot_clases_por_periodo.png")
  
 ```
 
@@ -110,12 +112,13 @@ Estos valores podrían servir para medir de manera subjetiva el nivel de esfuerz
 #### Anio graduación
 
 ```{r echo=FALSE}
-survey$anio_graduacion <- as.numeric(paste(survey$anio_graduacion ))
-summary(survey$anio_graduacion)
-survey$anio_graduacion[[55]] <- 2018
- ggplot(survey, aes(y=anio_graduacion)) + geom_boxplot(aes(x = factor(1))) +
+variables_estudio$anio_graduacion <- as.numeric(paste(variables_estudio$anio_graduacion))
+summary(variables_estudio$anio_graduacion)
+variables_estudio$anio_graduacion[[55]] <- 2018
+ ggplot(variables_estudio, aes(y=anio_graduacion)) + geom_boxplot(aes(x = factor(1))) +
   ylim(2015,2021)
-ggsave("anio_graduacion.png")
+ 
+#ggsave("anio_graduacion.png")
 ```
 
 La principal razón para considerar el año de graduación como verdaderamente importante, es comprender que deseamos abarcar hasta lo más actual posible, pues son estas generaciones recientes las que más dificultades podrían presentar.
@@ -128,7 +131,7 @@ survey$promedio_graduacion[[21]] <- 78
 survey$promedio_graduacion <- as.numeric(paste(survey$promedio_graduacion))
 summary(survey$promedio_graduacion)
 ggplot(survey, aes(y=promedio_graduacion)) + geom_boxplot(aes(x = factor(1)))
-ggsave("boxplot_promedio_graduacion.png")
+#ggsave("boxplot_promedio_graduacion.png")
 ```
 
 Un gráfico de caja que pareció la opción más viable para representar estos valores tan diversos, y es que encontramos valores bastante atípicos tanto por encima como debajo del rango intercuartílico.
@@ -139,13 +142,12 @@ Más adelante en el análisis correlacional se estudiara si estos valores atípi
 survey$trabajo_actual
 ggplot(data=survey, aes(as.factor(trabajo_actual))) + geom_bar( color="black", fill=rgb(0.4,0.5,0.1,0.7), aes(y=..prop.., group = 1)) +
  labs(x ="trabajo_actual", y= "Porcentaje") 
-ggsave("trabajo_actual.png")
+#ggsave("trabajo_actual.png")
 ```
 El porcentaje de empleabilidad en los estudiantes recién graduados de ingeniería en sistemas como se observa en la figura anterior es de más del 80% con menos del 20% desempleado a la actualidad.
 
 ## Rendimiento Universitario 
 ```{r echo=FALSE}
-survey$excelencia_academica 
 nombre_columnas <- c(rep("eleccion_estudio" , 2),rep("excelencia_academica", 2))
 condicion <- rep(c("Si","No"), 2)
 valor_eleccion_estudio <- prop.table(table(survey$eleccion_estudio))
@@ -158,14 +160,14 @@ ggplot(df_plot_ru, aes(fill=condicion, y=valor, x=nombre_columnas)) +
     geom_bar(position="dodge", stat="identity") + 
   labs(y = "Porcentaje") +
     coord_flip()
-ggsave("becado.png")
+#ggsave("becado.png")
 ```
 
 Los encuestados respondieron a estas preguntas binarias ofreciendo resultados que más adelante cotejados con otras variables de interés, permitirán hacer un análisis más complejo sobre aspectos que podrían repercutir en el estado laboral de los mismos.
 
 Sin embargo, de manera general obtenemos que quienes no obtuvieron calificaciones que los posicionaran como estudiantes de excelencia académica doblan a los que sí lo consiguieron, también se observa que la mayor parte de los encuestados estudiaron la carrera de ingeniería en sistemas por elección propia.
 
-##Correlaciones
+## Correlaciones
 
 Un estudio correlacional determina si dos variables están correlacionadas o no. Esto significa analizar si un aumento o disminución en una variable coincide con un aumento o disminución en la otra variable.
 
@@ -240,13 +242,13 @@ shapiro.test(no_trabaja$promedio_graduacion)
 ##### Conclusión
 El resultado de p-value es 0.2167 que es mayor a 0.05 por lo tanto no se puede rechazar la hipotesis nula y los datos son normales.
 
-####Prueba de homocedasticidad
+#### Prueba de homocedasticidad
 
 ```{r}
 var.test(no_trabaja$promedio_graduacion,Si_trabaja$promedio_graduacion)
 
 ```
-####Interpretación: 
+#### Interpretación: 
 Con un p-value = 0.6082, mayor de 0.05, no podemos rechazar la hipótesis nula. Por lo tanto suponemos homogeneidad de varianzas.
 
 ```{r}
@@ -256,7 +258,7 @@ t.test( no_trabaja$promedio_graduacion,Si_trabaja$promedio_graduacion,
         var.equal = TRUE )
 ```
 
-####Interpretación: 
+#### Interpretación: 
 Con un p-value = 0.3803, mayor de 0.05, no podemos rechazar la hipótesis nula. Por lo tanto suponemos que las medias de los grupos son iguales.
 
 
@@ -300,7 +302,7 @@ fviz_pca_biplot(res, repel = TRUE,
 ```
 Al ser solo dos variables numericas las que se estan correlacionando es evidente el tipo de influencia de una con la otra se observa que el angulo entre las dos variables se acerca a 90 grados y el sen(90) es 0.
 
-##Análisis explicativo
+## Análisis explicativo
 
 En nuestro caso de estudio la variable de respuesta y variable dependiente será la empleabilidad de los graduados de ingeniería en sistemas, dicha variable está definida en nuestra encuesta por la siguiente pregunta:
 ¿Actualmente tienes trabajo? 
@@ -367,3 +369,45 @@ Tomar en cuenta que el numero 1 es el factor de desempleo, el gráfico anterior 
 De los datos anteriores se puede concluir que los retos que un recien graduado se enfrenta van relacionados a la experiencia, y el nivel de conocimiento en areas sensibles como el ingles por ejemplo que las personas que estaban en un nivel avanzado contaban con 0% porciento de desempleo.
 
 ## Solución técnologica.
+#### Comunicación
+
+Nuestra solución tecnológica hace uso de la plataforma de AWS. Consiste en 3 partes de comunicación esencial para su efectiva funcionalidad. Primero tenemos la conexión Seguro social y UNAH que es donde vamos a compilar información importante del estudiante, seguido de Hadoop donde toda la información que obtengamos del seguro social y de la unah será manipulada en esta parte de la solución tecnológica. Y tenemos el portal del estudiante donde este estará almacenado en un EC2 en aws y se usará elastic beanstalk para desarrollar esta parte de la infraestructura. En el portal es donde el estudiante estará proporcionando su CV para poder ser analizado en hadoop con la información de la UNAH y del seguro social. Una vez analizada la información todo será regresado al portal del estudiante en el cual estará el estado de empleabilidad para que el lo vea o si se decide sera solo de acceso administrativo.
+
+#### Seguro Social - UNAH
+
+![Seguro Social- UNAH.](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/1.png)
+
+![Image](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/2.png)
+
+Una vez que el estudiante esté listo para su práctica profesional y  abra expediente en las oficinas de ingeniería en sistemas, el tendrá que enviar su CV a nuestra plataforma. Una vez tenido el CV inicia el proceso de recopilación de información. La información del CV será manipulada en Hadoop Mahout. 
+Como habíamos dicho anteriormente en el Capítulo II, primero se ocupará hacer unas pruebas de entrenamiento para el algoritmo de aprendizaje automático. Así mismo, este algoritmo se estará re-aprendiendo cada dos años debido a que las tecnológicas son cambiantes. En este caso es donde entra la conexión Seguro Social - UNAH. Nosotros necesitamos saber cómo luce un CV apto para la empleabilidad o uno no apto para la empleabilidad. Esto lo podemos resolver sabiendo si el estudiante labora después de su graduación. Primero traemos los datos de la UNAH para saber los datos de identificación personal del estudiante y compararlos con los del seguro social. Si se registran reducciones recientes  en las cuentas de dichos estudiante quiere decir que están actualmente laborando.
+
+##### Portal web - AWS Elastic beanstalk
+![Image.](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/3.png)
+
+El portal web estará montando en los servidores de AWS y estaremos usando Elastic Beanstalk por razones de organización. Elastic Beanstalk es solo una integración con muchas otras tecnologías dentro de los servicios que ofrece AWS que en nuestro caso nos ayudará a mantener organizado nuestro trabajo y nos ahorra tiempo de configuración. 
+Si bien es cierto, el portal sólo lo estarán viendo los estudiantes o los administradores de la carrera de ingeniería en sistemas, a nosotros los desarrolladores nos servirá para integrar toda la información que viene de hadoop y que va para hadoop. 
+
+#### Hadoop - AWS Glue
+
+![Image.](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/4.png)
+
+Una vez consumidas las APIs del Seguro Social y de la UNAH esta información se estar guardando en una base de datos relacional. Donde se estará utilizando AWS Glue como herramienta de Extracción, carga y transformación. Antes de enviar la información a Hadoop  primero preparamos los datos y despues enviemos a Hadoop. 
+Hadoop es un set de tecnologías para aplicaciones en forma de cluster que mayormente se utilizan para el trabajo de datos masivos. En nuestro caso estamos interesado en la interacción que tiene con computación distribuida y las capabilidades de la herramienta madura como Mahout para el desarrollo de algoritmos de aprendizaje automático. 
+Una vez nuestra información se encuentre de forma ordenada en AWS glue, está pasara a Hadoop donde sera utlizara para entrenar y posteriormente se utilizará para decidir el nivel de empleabilidad de los CVs de diferentes alumnos de la carrera de ingeniería en sistema de la UNAH.
+
+
+#### Presupuesto
+
+
+![](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/5.png)
+![](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/6.png)
+
+![](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/7.png)
+![](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/8.png)
+
+![](C:/Users/Wilma\Documents/Seminario de Investigacion/paperCapitulo4/paperCapitulo4/9.png)
+
+En total serian 2375 dolares americanos por año. Estamos confiados en que solo es un estimado ya que la calculadora de AWS no nos dejaba poner valores mínimos de cierto tiempo, tuvimos que elegir los datos que ellos pensaban deseables. 
+ Los primeros dos años serán los menos costosos ya que solo se están recopilando información y solo se estará pagando el mínimo para el dominio del portal y almacenamiento. Después de compilar información y ver que se tiene suficiente información necesaria para empezar a entrenar el algoritmo, se empezaría a utilizar los servicios de Hadoop para entrenar el algoritmo. Confiamos en que no sería mucho el tiempo de entrenamiento y esperamos un uso mínimo del servidor de Hadoop al entrenar el algoritmo. Nuevamente se utilizará el servidor de Hadoop para determinar el nivel de empleabilidad de cada estudiante y este se hará en batch para cortar costos. Se habilitaran una cantidad de días al empezar la matrícula para que el estudiante envíe su CV a la plataforma.
+
