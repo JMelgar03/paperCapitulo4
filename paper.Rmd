@@ -99,6 +99,7 @@ variables_estudio$anio_graduacion <- as.factor(variables_estudio$anio_graduacion
 
 En esta sección se describirán mediante gráficos los datos recopilados de las diferentes variables su comportamiento y mencion de valores atípicos en caso de que los hayan, además de las transformaciones realizadas.
 
+
 #### Clases por periodo
 ```{r echo=FALSE}
 ggplot(data=survey, aes(as.factor(clases_por_periodo))) + geom_bar(color="blue", fill=rgb(0.1,0.5,0.4,0.7), aes(y=..prop.., group = 1)) +
@@ -108,6 +109,8 @@ ggplot(data=survey, aes(as.factor(clases_por_periodo))) + geom_bar(color="blue",
 ```
 
 Estos valores podrían servir para medir de manera subjetiva el nivel de esfuerzo que tenían los encuestados en su etapa de estudiantes, por la condición de que algunas personas trabajan y estudian no son capaces de cursar el mismo número de clases que las que no cuentan con empleo y se dedican solo al estudio aún así el valor más común es 4 que se encuentra dentro del rango de lo sugerido por el plan de estudios.
+
+
 
 #### Anio graduación
 
@@ -124,6 +127,7 @@ variables_estudio$anio_graduacion[[55]] <- 2018
 La principal razón para considerar el año de graduación como verdaderamente importante, es comprender que deseamos abarcar hasta lo más actual posible, pues son estas generaciones recientes las que más dificultades podrían presentar.
 Es de esta manera que tenemos que la mayoría de encuestados corresponden a egresados el año 2019, son una muestra bastante relevante para los fines que perseguimos, pues ejemplifican a la perfección las complicaciones que podrían tener en temas de empleabilidad.
 
+
 #### Promedio graduación
 
 ```{r echo=FALSE}
@@ -137,6 +141,7 @@ ggplot(survey, aes(y=promedio_graduacion)) + geom_boxplot(aes(x = factor(1)))
 Un gráfico de caja que pareció la opción más viable para representar estos valores tan diversos, y es que encontramos valores bastante atípicos tanto por encima como debajo del rango intercuartílico.
 Más adelante en el análisis correlacional se estudiara si estos valores atípicos dependen de las clases que se llevaban por periodo.
 
+
 #### Trabajo actual
 ```{r echo=FALSE}
 survey$trabajo_actual
@@ -144,7 +149,9 @@ ggplot(data=survey, aes(as.factor(trabajo_actual))) + geom_bar( color="black", f
  labs(x ="trabajo_actual", y= "Porcentaje") 
 #ggsave("trabajo_actual.png")
 ```
+
 El porcentaje de empleabilidad en los estudiantes recién graduados de ingeniería en sistemas como se observa en la figura anterior es de más del 80% con menos del 20% desempleado a la actualidad.
+
 
 ## Rendimiento Universitario 
 ```{r echo=FALSE}
@@ -167,9 +174,11 @@ Los encuestados respondieron a estas preguntas binarias ofreciendo resultados qu
 
 Sin embargo, de manera general obtenemos que quienes no obtuvieron calificaciones que los posicionaran como estudiantes de excelencia académica doblan a los que sí lo consiguieron, también se observa que la mayor parte de los encuestados estudiaron la carrera de ingeniería en sistemas por elección propia.
 
+
 ## Correlaciones
 
 Un estudio correlacional determina si dos variables están correlacionadas o no. Esto significa analizar si un aumento o disminución en una variable coincide con un aumento o disminución en la otra variable.
+
 
 #### Correlación de variables categoricas
 ```{r}
@@ -183,9 +192,11 @@ ggplot(survey) +
 chisq.test(table(survey$eleccion_estudio,survey$excelencia_academica))
 
 ```
+
 ##### Conclusión
 Según el valor obtenido del p-value se rechaza la hipotesis nula, por lo tanto las variables son dependientes.
 Los datos anteriores muestran que las personas que no eligen la carrera por elección propia estan a un 50% de ser o no excelencia académica, mientras tanto y contradiciendo a lo que se cree el porcentaje de los que eligen la carrera y no son excelencia académica curiosamente es mayor.
+
 
 #### Correlación de variables numerica/categorica
 La correlación que se tratará en esta seccion es entre la variable promedio_graduacion y trabajo_actual.
@@ -216,6 +227,7 @@ Si_trabaja <- survey %>% filter(trabajo_actual == "Sí") %>% select(promedio_gra
 no_trabaja <- survey %>% filter(trabajo_actual == "No") %>% select(promedio_graduacion)
 
 ```
+
 #### Análisis para el grupo que si tiene empleo:
 
 ```{r}
@@ -229,6 +241,7 @@ shapiro.test(Si_trabaja$promedio_graduacion)
 ##### Conclusión
 El resultado de p-value es 0.1172 que es mayor a 0.05 por lo tanto no se puede rechazar la hipotesis nula y los datos son normales.
 
+
 #### Análisis para el grupo que no tiene empleo:
 
 ```{r}
@@ -241,6 +254,7 @@ shapiro.test(no_trabaja$promedio_graduacion)
 
 ##### Conclusión
 El resultado de p-value es 0.2167 que es mayor a 0.05 por lo tanto no se puede rechazar la hipotesis nula y los datos son normales.
+
 
 #### Prueba de homocedasticidad
 
@@ -301,6 +315,7 @@ fviz_pca_biplot(res, repel = TRUE,
 
 ```
 Al ser solo dos variables numericas las que se estan correlacionando es evidente el tipo de influencia de una con la otra se observa que el angulo entre las dos variables se acerca a 90 grados y el sen(90) es 0.
+
 
 ## Análisis explicativo
 
@@ -368,7 +383,9 @@ Tomar en cuenta que el numero 1 es el factor de desempleo, el gráfico anterior 
 
 De los datos anteriores se puede concluir que los retos que un recien graduado se enfrenta van relacionados a la experiencia, y el nivel de conocimiento en areas sensibles como el ingles por ejemplo que las personas que estaban en un nivel avanzado contaban con 0% porciento de desempleo.
 
+
 ## Solución técnologica.
+
 #### Comunicación
 
 Nuestra solución tecnológica hace uso de la plataforma de AWS. Consiste en 3 partes de comunicación esencial para su efectiva funcionalidad. Primero tenemos la conexión Seguro social y UNAH que es donde vamos a compilar información importante del estudiante, seguido de Hadoop donde toda la información que obtengamos del seguro social y de la unah será manipulada en esta parte de la solución tecnológica. Y tenemos el portal del estudiante donde este estará almacenado en un EC2 en aws y se usará elastic beanstalk para desarrollar esta parte de la infraestructura. En el portal es donde el estudiante estará proporcionando su CV para poder ser analizado en hadoop con la información de la UNAH y del seguro social. Una vez analizada la información todo será regresado al portal del estudiante en el cual estará el estado de empleabilidad para que el lo vea o si se decide sera solo de acceso administrativo.
